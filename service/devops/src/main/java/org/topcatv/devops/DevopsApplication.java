@@ -1,6 +1,5 @@
 package org.topcatv.devops;
 
-import org.hibernate.SessionFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
@@ -10,21 +9,19 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.topcatv.devops.model.Authority;
-import org.topcatv.devops.repository.AuthorityRepository;
 import org.topcatv.devops.model.User;
+import org.topcatv.devops.repository.AuthorityRepository;
 import org.topcatv.devops.repository.UserRepository;
 import org.topcatv.devops.support.PassUtil;
-
-import javax.persistence.EntityManagerFactory;
 
 /**
  * @Author liuyi
  */
 @SpringBootApplication(exclude = {MongoAutoConfiguration.class, MongoDataAutoConfiguration.class})
-public class DemoApplication {
+public class DevopsApplication {
 
 	public static void main(String[] args) {
-		ConfigurableApplicationContext context = SpringApplication.run(DemoApplication.class, args);
+		ConfigurableApplicationContext context = SpringApplication.run(DevopsApplication.class, args);
 		UserRepository userRepository = context.getBean(UserRepository.class);
 		AuthorityRepository authorityRepository = context.getBean(AuthorityRepository.class);
 
@@ -55,12 +52,6 @@ public class DemoApplication {
 			repository.save(authority);
 		}
 		return authority;
-	}
-
-	@Bean
-	@SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-	public SessionFactory sessionFactory(EntityManagerFactory emf) {
-		return emf.unwrap(SessionFactory.class);
 	}
 
 	@Bean
