@@ -8,11 +8,11 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.topcatv.devops.model.Authority;
 import org.topcatv.devops.model.User;
 import org.topcatv.devops.repository.AuthorityRepository;
 import org.topcatv.devops.repository.UserRepository;
-import org.topcatv.devops.support.PassUtil;
 
 /**
  * @Author liuyi
@@ -24,28 +24,29 @@ public class DevopsApplication {
 		ConfigurableApplicationContext context = SpringApplication.run(DevopsApplication.class, args);
 		UserRepository userRepository = context.getBean(UserRepository.class);
 		AuthorityRepository authorityRepository = context.getBean(AuthorityRepository.class);
+		BCryptPasswordEncoder encoder = context.getBean(BCryptPasswordEncoder.class);
 
-		Authority adminAuthority = getOrGreateAuthority("ROLE_ADMIN", authorityRepository);
-		Authority basicAuthority = getOrGreateAuthority("ROLE_BASIC", authorityRepository);
+		Authority adminAuthority = getOrCreateAuthority("ROLE_ADMIN", authorityRepository);
+		Authority basicAuthority = getOrCreateAuthority("ROLE_BASIC", authorityRepository);
 
 		User admin = new User("admin", "123456");
-		encodePassword(admin);
+		encodePassword(admin, encoder);
 		admin.getAuthorities().add(adminAuthority);
 		admin.getAuthorities().add(basicAuthority);
 
 		User test = new User("test", "test");
-		encodePassword(test);
+		encodePassword(test, encoder);
 		test.getAuthorities().add(basicAuthority);
 
 		userRepository.save(admin);
 		userRepository.save(test);
 	}
 
-	private static void encodePassword(User user) {
-		user.setPassword(PassUtil.encode(user.getUsername(), user.getPassword()));
+	private static void encodePassword(User user, BCryptPasswordEncoder encoder) {
+		user.setPassword(encoder.encode(user.getPassword()));
 	}
 
-	private static Authority getOrGreateAuthority(String authorityText, AuthorityRepository repository) {
+	private static Authority getOrCreateAuthority(String authorityText, AuthorityRepository repository) {
 		Authority authority = repository.findByAuthority(authorityText);
 		if (authority == null) {
 			authority = new Authority(authorityText);

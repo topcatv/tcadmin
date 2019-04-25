@@ -21,12 +21,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
         argumentResolvers.add(new JsonArgumentResolver());
     }
 
-    @Bean
-    public FilterRegistrationBean filterRegistrationBean() {
-        FilterRegistrationBean bean = new FilterRegistrationBean();
-        bean.setUrlPatterns(Collections.singletonList("/api/*"));
-        bean.setFilter(new OpenSessionInViewFilter());
-        return bean;
-    }
+//    @Bean
+//    public FilterRegistrationBean filterRegistrationBean() {
+//        FilterRegistrationBean bean = new FilterRegistrationBean();
+//        bean.setUrlPatterns(Collections.singletonList("/api/*"));
+//        bean.setFilter(new OpenSessionInViewFilter());
+//        return bean;
+//    }
 
 }

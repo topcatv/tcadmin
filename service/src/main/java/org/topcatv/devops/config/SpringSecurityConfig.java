@@ -1,39 +1,45 @@
 package org.topcatv.devops.config;
 
-import com.allanditzel.springframework.security.web.csrf.CsrfTokenResponseHeaderBindingFilter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpMethod;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.orm.hibernate5.support.OpenSessionInViewFilter;
+import org.springframework.orm.jpa.support.OpenEntityManagerInViewFilter;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.topcatv.devops.controller.BaseController;
 import org.topcatv.devops.controller.SessionController;
-import org.topcatv.devops.security.CustomAuthenticationFilter;
+import org.topcatv.devops.security.CustomLogoutHandler;
+import org.topcatv.devops.security.EntryPointUnauthorizedHandler;
+import org.topcatv.devops.security.MyAccessDeniedHandler;
+import org.topcatv.devops.security.jwt.JwtAuthenticationTokenFilter;
+import org.topcatv.devops.security.jwt.JwtLoginFilter;
 
-import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Locale;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author liuyi
@@ -46,134 +52,69 @@ public class SpringSecurityConfig extends WebSecurityConfigurerAdapter {
     private UserDetailsService userDetailsService;
 
     @Autowired
-    private CustomLoginHandler customLoginHandler;
-
-    @Autowired
     private CustomLogoutHandler customLogoutHandler;
 
+    /**
+     * 注册 401 处理器
+     */
     @Autowired
-    private CustomAccessDeniedHandler customAccessDeniedHandler;
+    private EntryPointUnauthorizedHandler unauthorizedHandler;
+
+    /**
+     * 注册 403 处理器
+     */
+    @Autowired
+    private MyAccessDeniedHandler accessDeniedHandler;
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService);
+        auth.authenticationProvider(authenticationProvider());
+    }
+
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(10);
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setUserDetailsService(userDetailsService);
+        authenticationProvider.setPasswordEncoder(passwordEncoder());
+        authenticationProvider.setHideUserNotFoundExceptions(false);
+        return authenticationProvider;
+    }
+
+    @Bean
+    public JwtLoginFilter jwtLoginFilter() throws Exception {
+        return new JwtLoginFilter(authenticationManager());
+    }
+
+    @Bean
+    public JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter() throws Exception {
+        return new JwtAuthenticationTokenFilter(authenticationManager());
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        http.authorizeRequests()
-                .antMatchers("/api/admin/**").hasRole("ADMIN")
-                .antMatchers("/api/basic/**").hasRole("BASIC")
-                .antMatchers("/api/session").permitAll()
-                .antMatchers(HttpMethod.GET).permitAll()
-                .antMatchers("/api/**").hasRole("BASIC");
-
-        http.formLogin();
-
-        http.logout()
-                .logoutUrl("/api/session/logout")
+        http.csrf().disable()
+                .headers().frameOptions().sameOrigin()
+                .and().authorizeRequests()
+                .antMatchers("/logout").permitAll()
+                .antMatchers("/auth/**").permitAll()
+                .antMatchers("/actuator/**").permitAll()
+                .antMatchers("/h2-console/**/**").permitAll()
+                .anyRequest().authenticated().and()
+                .addFilter(jwtLoginFilter())
+                .addFilter(jwtAuthenticationTokenFilter())
+                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and().logout()
+                // 使用JWT无法在后台进行logout，只能设置blacklist
+                .logoutUrl("/logout")
                 .addLogoutHandler(customLogoutHandler)
-                .logoutSuccessHandler(customLogoutHandler);
-
-        http.exceptionHandling()
-                .accessDeniedHandler(customAccessDeniedHandler)
-                .authenticationEntryPoint(customAccessDeniedHandler);
-
-        http.csrf()
-                .ignoringAntMatchers("/api/session/**");
-
-        http.addFilterBefore(new AcceptHeaderLocaleFilter(), UsernamePasswordAuthenticationFilter.class);
-
-        http.addFilterAt(customAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-
-        http.addFilterAfter(new CsrfTokenResponseHeaderBindingFilter(), CsrfFilter.class);
-    }
-
-    private CustomAuthenticationFilter customAuthenticationFilter() throws Exception {
-        CustomAuthenticationFilter filter = new CustomAuthenticationFilter();
-        filter.setAuthenticationSuccessHandler(customLoginHandler);
-        filter.setAuthenticationFailureHandler(customLoginHandler);
-        filter.setAuthenticationManager(authenticationManager());
-        filter.setFilterProcessesUrl("/api/session/login");
-        return filter;
-    }
-
-    private static void responseText(HttpServletResponse response, String content) throws IOException {
-        response.setContentType(MediaType.APPLICATION_JSON_UTF8_VALUE);
-        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-        response.setContentLength(bytes.length);
-        response.getOutputStream().write(bytes);
-        response.flushBuffer();
-    }
-
-    @Component
-    public static class CustomAccessDeniedHandler extends BaseController implements AuthenticationEntryPoint, AccessDeniedHandler {
-        // NoLogged Access Denied
-        @Override
-        public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-            responseText(response, errorMessage(authException.getMessage()));
-        }
-
-        // Logged Access Denied
-        @Override
-        public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {
-            responseText(response, errorMessage(accessDeniedException.getMessage()));
-        }
-    }
-
-    @Component
-    public static class CustomLoginHandler extends BaseController implements AuthenticationSuccessHandler, AuthenticationFailureHandler {
-        // Login Success
-        @Override
-        public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
-            logger.info("User login successfully, name={}", authentication.getName());
-            responseText(response, objectResult(SessionController.getJSON(authentication)));
-        }
-
-        // Login Failure
-        @Override
-        public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
-            responseText(response, errorMessage(exception.getMessage()));
-        }
-    }
-
-    @Component
-    public static class CustomLogoutHandler extends BaseController implements LogoutHandler, LogoutSuccessHandler {
-        // Before Logout
-        @Override
-        public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-
-        }
-
-        // After Logout
-        @Override
-        public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
-            responseText(response, objectResult(SessionController.getJSON(null)));
-        }
-    }
-
-    private static class AcceptHeaderLocaleFilter implements Filter {
-        private AcceptHeaderLocaleResolver localeResolver;
-
-        private AcceptHeaderLocaleFilter() {
-            localeResolver = new AcceptHeaderLocaleResolver();
-            localeResolver.setDefaultLocale(Locale.US);
-        }
-
-        @Override
-        public void init(FilterConfig filterConfig) {
-        }
-
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-            Locale locale = localeResolver.resolveLocale((HttpServletRequest) request);
-            LocaleContextHolder.setLocale(locale);
-
-            chain.doFilter(request, response);
-        }
-
-        @Override
-        public void destroy() {
-        }
+                .logoutSuccessHandler(customLogoutHandler)
+                .and().exceptionHandling()
+                .authenticationEntryPoint(unauthorizedHandler)
+                .accessDeniedHandler(accessDeniedHandler);
     }
 }

@@ -21,13 +21,19 @@ public class BaseController {
         JSONObject root = new JSONObject();
         root.put("success", true);
         root.put("data", object);
+        root.put("status", 200);
         return root.toString();
     }
 
     protected String errorMessage(String message) {
+        return errorMessage(message, -1);
+    }
+
+    protected String errorMessage(String message, int status) {
         JSONObject root = new JSONObject();
         root.put("success", false);
         root.put("message", message);
+        root.put("status", status);
         return root.toString();
     }
 

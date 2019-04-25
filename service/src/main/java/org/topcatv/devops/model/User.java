@@ -49,7 +49,7 @@ public class User extends BaseModel implements UserDetails {
     }
 
     @Override
-    @Column(length = 50, nullable = false)
+    @Column(length = 150, nullable = false)
     public String getPassword() {
         return this.password;
     }

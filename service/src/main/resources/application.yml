@@ -31,7 +31,7 @@ jwt:
   # 过期时间   单位秒 7天后过期  604800
   expiration: 3600
   # 自定义token 前缀字符
-  tokenHead: Bearer-
+  tokenHead: Bearer
   # 超时时间   单位秒
   access_token: 3600
   # 刷新token时间   单位秒
@@ -42,7 +42,6 @@ jwt:
       refresh: oauth/refresh
       register: login/account
 
-
 # 配置不需要认证的接口
 com:
   example:
@@ -52,7 +51,6 @@ com:
           /auth/v1/api/login/**,
           /auth/v1/api/module/tree/**,
           /auth/v1/api/grid/**
-
 
 # 日志
 logging:
