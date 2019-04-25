@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.topcatv.devops.model.User;
+import org.topcatv.devops.security.CustomUserDetails;
 
 import javax.annotation.Resource;
 import javax.servlet.FilterChain;
@@ -49,7 +50,7 @@ public class JwtLoginFilter extends UsernamePasswordAuthenticationFilter {
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
         log.warn("JwtLoginFilter successfulAuthentication");
         // Credentials was protected, it is null
-        User user = (User) authResult.getPrincipal();
+        CustomUserDetails user = (CustomUserDetails) authResult.getPrincipal();
         String token = jwtTokenUtil.generateToken(user);
         response.addHeader(header, tokenHead + " " + token);
         responseText(response, objectResult(token));

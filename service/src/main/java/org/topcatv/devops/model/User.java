@@ -1,6 +1,5 @@
 package org.topcatv.devops.model;
 
-import org.springframework.security.core.userdetails.UserDetails;
 import org.topcatv.devops.support.BaseModel;
 
 import javax.persistence.*;
@@ -11,9 +10,9 @@ import java.util.Set;
  * @author liuyi
  */
 @Entity
-public class User extends BaseModel implements UserDetails {
+public class User extends BaseModel {
 
-    private Set<Authority> authorities = new HashSet<>();
+    private Set<Role> roles = new HashSet<>();
     private String username;
     private String password;
     private boolean accountNonExpired;
@@ -33,53 +32,46 @@ public class User extends BaseModel implements UserDetails {
         this.enabled = true;
     }
 
-    @Override
     @ManyToMany
-    @JoinTable(name = "user_authorities",
+    @JoinTable(name = "user_roles",
             joinColumns = {@JoinColumn(name = "user_id")},
-            inverseJoinColumns = {@JoinColumn(name = "authority_id")})
-    public Set<Authority> getAuthorities() {
-        return this.authorities;
+            inverseJoinColumns = {@JoinColumn(name = "role_id")})
+    public Set<Role> getRoles() {
+        return this.roles;
     }
 
-    @Override
     @Column(length = 50, unique = true, nullable = false)
     public String getUsername() {
         return this.username;
     }
 
-    @Override
     @Column(length = 150, nullable = false)
     public String getPassword() {
         return this.password;
     }
 
-    @Override
     @Column(nullable = false)
     public boolean isAccountNonExpired() {
         return this.accountNonExpired;
     }
 
-    @Override
     @Column(nullable = false)
     public boolean isAccountNonLocked() {
         return this.accountNonLocked;
     }
 
-    @Override
     @Column(nullable = false)
     public boolean isCredentialsNonExpired() {
         return this.credentialsNonExpired;
     }
 
-    @Override
     @Column(nullable = false)
     public boolean isEnabled() {
         return this.enabled;
     }
 
-    public void setAuthorities(Set<Authority> authorities) {
-        this.authorities = authorities;
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
     }
 
     public void setUsername(String username) {
