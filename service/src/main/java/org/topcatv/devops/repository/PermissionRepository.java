@@ -5,4 +5,5 @@ import org.topcatv.devops.model.Permission;
 
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
+    Permission findByName(String name);
 }

@@ -3,6 +3,7 @@ package org.topcatv.devops.controller;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +22,7 @@ public class UserController extends BaseController {
     @Autowired
     private UserRepository userRepository;
 
+    @PreAuthorize("hasRole('BASIC') AND hasAnyAuthority('b')")
     @GetMapping(value = "/api/admin/users", produces = MEDIA_TYPE)
     public String listAdminUser() {
         JSONArray array = new JSONArray();

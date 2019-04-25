@@ -1,5 +1,7 @@
 package org.topcatv.devops.model;
 
+import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
 import lombok.EqualsAndHashCode;
 import org.topcatv.devops.support.BaseModel;
 
@@ -14,7 +16,7 @@ public class Role extends BaseModel {
 
     private String name;
 
-    private List<Permission> permissions;
+    private List<Permission> permissions = Lists.newArrayList();
 
     public Role() {
     }
@@ -42,5 +44,18 @@ public class Role extends BaseModel {
 
     public void setPermissions(List<Permission> permissions) {
         this.permissions = permissions;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Role)) return false;
+        Role role = (Role) o;
+        return Objects.equal(name, role.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(name);
     }
 }

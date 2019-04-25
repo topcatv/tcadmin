@@ -2,14 +2,13 @@ package org.topcatv.devops.model;
 
 import org.topcatv.devops.support.BaseModel;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
+import javax.persistence.*;
 
 @Entity
 public class Permission extends BaseModel {
 
     private String name;
-    private Long pid;
+    private Permission parent;
     private String url;
     private String description;
 
@@ -20,14 +19,6 @@ public class Permission extends BaseModel {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public Long getPid() {
-        return pid;
-    }
-
-    public void setPid(Long pid) {
-        this.pid = pid;
     }
 
     public String getUrl() {
@@ -44,5 +35,15 @@ public class Permission extends BaseModel {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @ManyToOne
+    @JoinColumn(name="parent_id")
+    public Permission getParent() {
+        return parent;
+    }
+
+    public void setParent(Permission parent) {
+        this.parent = parent;
     }
 }

@@ -15,6 +15,7 @@ import java.util.Map;
 public class JwtTokenUtil {
     private static final String CLAIM_KEY_USERNAME = "sub";
     private static final String CLAIM_KEY_CREATED = "created";
+//    private static final String CLAIM_KEY_AUTHORITIES = "authorities";
 
     @Value("${jwt.secret}")
     private String secret;
@@ -85,6 +86,7 @@ public class JwtTokenUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CLAIM_KEY_USERNAME, userDetails.getUsername());
         claims.put(CLAIM_KEY_CREATED, new Date());
+//        claims.put(CLAIM_KEY_AUTHORITIES, userDetails.getAuthorities());
         return generateToken(claims);
     }
 

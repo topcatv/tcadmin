@@ -9,8 +9,10 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.topcatv.devops.model.Permission;
 import org.topcatv.devops.model.Role;
 import org.topcatv.devops.model.User;
+import org.topcatv.devops.repository.PermissionRepository;
 import org.topcatv.devops.repository.RoleRepository;
 import org.topcatv.devops.repository.UserRepository;
 
@@ -23,23 +25,44 @@ public class DevopsApplication {
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = SpringApplication.run(DevopsApplication.class, args);
 		UserRepository userRepository = context.getBean(UserRepository.class);
-		RoleRepository authorityRepository = context.getBean(RoleRepository.class);
+		RoleRepository roleRepository = context.getBean(RoleRepository.class);
+		PermissionRepository permissionRepository = context.getBean(PermissionRepository.class);
 		BCryptPasswordEncoder encoder = context.getBean(BCryptPasswordEncoder.class);
 
-		Role adminAuthority = getOrCreateRole("ROLE_ADMIN", authorityRepository);
-		Role basicAuthority = getOrCreateRole("ROLE_BASIC", authorityRepository);
+		Permission permission1 = getOrCreatePermission("a", "/a", permissionRepository);
+		Permission permission2 = getOrCreatePermission("b", "/a/b", permissionRepository);
+		permission2.setParent(permission1);
+
+		Role roleAdmin = getOrCreateRole("ROLE_ADMIN", roleRepository);
+		roleAdmin.getPermissions().add(permission1);
+		roleAdmin.getPermissions().add(permission2);
+		roleRepository.save(roleAdmin);
+		Role roleBasic = getOrCreateRole("ROLE_BASIC", roleRepository);
+		roleBasic.getPermissions().add(permission1);
+		roleRepository.save(roleBasic);
 
 		User admin = new User("admin", "123456");
 		encodePassword(admin, encoder);
-		admin.getRoles().add(adminAuthority);
-		admin.getRoles().add(basicAuthority);
+		admin.getRoles().add(roleAdmin);
+		admin.getRoles().add(roleBasic);
 
 		User test = new User("test", "test");
 		encodePassword(test, encoder);
-		test.getRoles().add(basicAuthority);
+		test.getRoles().add(roleBasic);
 
 		userRepository.save(admin);
 		userRepository.save(test);
+	}
+
+	private static Permission getOrCreatePermission(String name, String url, PermissionRepository repository) {
+		Permission permission = repository.findByName(name);
+		if(permission == null) {
+			permission = new Permission();
+			permission.setName(name);
+			permission.setUrl(url);
+			repository.save(permission);
+		}
+		return permission;
 	}
 
 	private static void encodePassword(User user, BCryptPasswordEncoder encoder) {
